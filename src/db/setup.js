@@ -1,7 +1,7 @@
 // ---------------------------------------------------
 // Database setup script
-// Run this ONCE to create all tables:
-//   npm run db:setup
+// Can be run standalone:  npm run db:setup
+// Also imported by server.js for auto-setup on deploy
 // ---------------------------------------------------
 
 const pool = require('./pool');
@@ -184,16 +184,20 @@ CREATE INDEX IF NOT EXISTS idx_chat_job ON chat_messages(job_id, created_at);
 
 `;
 
-async function setup() {
-  console.log('Setting up OddJob database...');
-  try {
-    await pool.query(setupSQL);
-    console.log('All tables created successfully!');
-  } catch (err) {
-    console.error('Error setting up database:', err.message);
-  } finally {
-    await pool.end();
-  }
-}
+// Export the SQL so server.js can use it
+module.exports = { setupSQL };
 
-setup();
+// If run directly (npm run db:setup), execute and close
+if (require.main === module) {
+  (async () => {
+    console.log('Setting up OddJob database...');
+    try {
+      await pool.query(setupSQL);
+      console.log('All tables created successfully!');
+    } catch (err) {
+      console.error('Error setting up database:', err.message);
+    } finally {
+      await pool.end();
+    }
+  })();
+}

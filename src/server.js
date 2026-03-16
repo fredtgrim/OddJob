@@ -52,12 +52,25 @@ app.get('/', (req, res) => {
 // ========================
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`
+// Auto-setup database tables on startup, then start server
+const pool = require('./db/pool');
+const { setupSQL } = require('./db/setup');
+
+async function startServer() {
+  try {
+    await pool.query(setupSQL);
+    console.log('Database tables ready!');
+  } catch (err) {
+    console.log('Database setup note:', err.message);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`
   =============================================
-    OddJob API is running!
-    Local:  http://localhost:${PORT}
-    Health: http://localhost:${PORT}/
+    OddJob API is running on port ${PORT}
   =============================================
-  `);
-});
+    `);
+  });
+}
+
+startServer();
