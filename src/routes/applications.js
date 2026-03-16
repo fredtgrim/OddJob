@@ -8,6 +8,8 @@ const express = require('express');
 const pool = require('../db/pool');
 const authenticate = require('../middleware/auth');
 
+const { createNotification } = require('../services/notify');
+
 const router = express.Router();
 
 router.use(authenticate);
@@ -150,6 +152,21 @@ router.post('/:job_id/apply', async (req, res) => {
     );
 
     await client.query('COMMIT');
+
+    // Notify the job poster that someone applied
+    const workerProfileResult = await pool.query(
+      'SELECT display_name FROM profiles WHERE user_id = $1',
+      [req.user.id]
+    );
+    const workerName = workerProfileResult.rows[0]?.display_name || 'Someone';
+    createNotification({
+      userId: job.poster_id,
+      type: 'new_application',
+      title: `${workerName} applied to your job`,
+      body: job.title,
+      jobId: job.id,
+      fromUserId: req.user.id,
+    });
 
     res.status(201).json({
       message: 'Application submitted! The job poster will review it.',

@@ -171,6 +171,20 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 
 
+-- Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id),
+    type            VARCHAR(50) NOT NULL,
+    title           VARCHAR(200) NOT NULL,
+    body            TEXT,
+    job_id          UUID REFERENCES jobs(id),
+    from_user_id    UUID REFERENCES users(id),
+    is_read         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+
 -- =============================================
 -- 3. INDEXES
 -- =============================================
@@ -181,6 +195,7 @@ CREATE INDEX IF NOT EXISTS idx_applications_job ON job_applications(job_id);
 CREATE INDEX IF NOT EXISTS idx_applications_worker ON job_applications(worker_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_reviewee ON reviews(reviewee_id);
 CREATE INDEX IF NOT EXISTS idx_chat_job ON chat_messages(job_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at);
 
 `;
 

@@ -7,6 +7,8 @@ const express = require('express');
 const pool = require('../db/pool');
 const authenticate = require('../middleware/auth');
 
+const { createNotification } = require('../services/notify');
+
 const router = express.Router();
 
 router.use(authenticate);
@@ -95,6 +97,21 @@ router.post('/:job_id', async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // Notify the person who was reviewed
+    const reviewerProfile = await pool.query(
+      'SELECT display_name FROM profiles WHERE user_id = $1',
+      [req.user.id]
+    );
+    const reviewerName = reviewerProfile.rows[0]?.display_name || 'Someone';
+    createNotification({
+      userId: reviewee_id,
+      type: 'new_review',
+      title: `${reviewerName} left you a ${rating}-star review`,
+      body: comment || job.title,
+      jobId: req.params.job_id,
+      fromUserId: req.user.id,
+    });
 
     res.status(201).json({
       message: 'Review submitted! Thank you.',

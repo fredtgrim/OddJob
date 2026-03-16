@@ -17,6 +17,7 @@ const reviewRoutes = require('./routes/reviews');
 const chatRoutes = require('./routes/chat');
 const paymentRoutes = require('./routes/payments');
 const profileRoutes = require('./routes/profile');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/reviews', reviewRoutes);            // /reviews/:job_id
 app.use('/chat', chatRoutes);                 // /chat/:job_id
 app.use('/payments', paymentRoutes);           // /payments/:job_id, /payments/:job_id/dispute
 app.use('/profile', profileRoutes);            // /profile/me, /profile/:user_id
+app.use('/notifications', notificationRoutes); // /notifications, /notifications/unread, /notifications/read
 
 // Health check endpoint (useful for monitoring)
 app.get('/', (req, res) => {

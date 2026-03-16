@@ -8,6 +8,7 @@ const pool = require('../db/pool');
 const authenticate = require('../middleware/auth');
 const { isTransitionAllowed } = require('../services/stateMachine');
 const { createPaymentHold, capturePayment, cancelPayment } = require('../services/payments');
+const { createNotification } = require('../services/notify');
 
 const router = express.Router();
 
@@ -244,6 +245,33 @@ router.patch('/:id/status', async (req, res) => {
       paymentResult = await cancelPayment(req.params.id);
     }
 
+    // --- NOTIFICATION TRIGGERS ---
+    if (newStatus === 'completed' && job.assigned_worker_id) {
+      // Notify the worker that the job is marked complete
+      const otherUserId = req.user.id === job.poster_id ? job.assigned_worker_id : job.poster_id;
+      createNotification({
+        userId: otherUserId,
+        type: 'job_completed',
+        title: 'A job has been marked complete!',
+        body: job.title,
+        jobId: req.params.id,
+        fromUserId: req.user.id,
+      });
+    } else if (newStatus === 'cancelled') {
+      // Notify the other party about cancellation
+      const otherUserId = req.user.id === job.poster_id ? job.assigned_worker_id : job.poster_id;
+      if (otherUserId) {
+        createNotification({
+          userId: otherUserId,
+          type: 'job_cancelled',
+          title: 'A job has been cancelled',
+          body: job.title,
+          jobId: req.params.id,
+          fromUserId: req.user.id,
+        });
+      }
+    }
+
     res.json({
       message: `Job status updated to "${newStatus}".`,
       job: updated.rows[0],
@@ -387,6 +415,16 @@ router.post('/:id/select/:worker_id', async (req, res) => {
       worker_id: req.params.worker_id,
       amount_cents: job.budget_cents,
       currency: job.currency,
+    });
+
+    // Notify the selected worker
+    createNotification({
+      userId: req.params.worker_id,
+      type: 'application_accepted',
+      title: 'You were selected for a job!',
+      body: job.title,
+      jobId: req.params.id,
+      fromUserId: req.user.id,
     });
 
     res.json({
